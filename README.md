@@ -15,7 +15,7 @@ A Next.js 14 application that generates 3D models from text descriptions with AR
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone [<repository-url>](https://github.com/jjcyz/text-to-ar-data.git)
    cd text-to-ar
    ```
 
