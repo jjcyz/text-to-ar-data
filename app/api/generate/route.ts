@@ -1,17 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-
-// Mock model URLs for different keywords
-const MODEL_MAPPINGS: Record<string, string> = {
-  'apple': 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
-  'chair': 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
-  'vase': 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
-  'desk': 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
-  'table': 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
-  'wooden': 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
-  'red': 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
-  'modern': 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
-}
+import { findMostSimilarModel, findModelByKeywords } from '@/lib/semantic-similarity'
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,23 +13,28 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find matching model based on keywords
-    const lowerPrompt = prompt.toLowerCase()
-    let modelUrl = 'https://modelviewer.dev/shared-assets/models/Astronaut.glb' // Default
+    // Use semantic similarity to find the most relevant model
+    let modelDescription
+    let matchingMethod = 'semantic'
 
-    for (const [keyword, url] of Object.entries(MODEL_MAPPINGS)) {
-      if (lowerPrompt.includes(keyword)) {
-        modelUrl = url
-        break
-      }
+    try {
+      modelDescription = await findMostSimilarModel(prompt)
+    } catch (error) {
+      console.warn('Semantic similarity failed, falling back to keyword matching:', error)
+      modelDescription = findModelByKeywords(prompt)
+      matchingMethod = 'keyword'
     }
+
+    const modelUrl = modelDescription.url
 
     // Check if Supabase environment variables are available
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
       console.warn('Supabase environment variables not found, skipping database operations')
       return NextResponse.json({
         modelUrl,
-        promptId: 'demo-' + Date.now() // Generate a demo ID
+        promptId: 'demo-' + Date.now(), // Generate a demo ID
+        modelName: modelDescription.name,
+        matchingMethod
       })
     }
 
@@ -57,6 +51,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         modelUrl,
         promptId: 'demo-' + Date.now(),
+        modelName: modelDescription.name,
+        matchingMethod,
         warning: 'Model generated but feedback storage may not work'
       })
     }
@@ -77,13 +73,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         modelUrl,
         promptId: promptData.id,
+        modelName: modelDescription.name,
+        matchingMethod,
         warning: 'Model generated but feedback storage may not work'
       })
     }
 
     return NextResponse.json({
       modelUrl,
-      promptId: promptData.id
+      promptId: promptData.id,
+      modelName: modelDescription.name,
+      matchingMethod
     })
 
   } catch (error) {

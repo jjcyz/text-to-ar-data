@@ -3,10 +3,13 @@
 import React, { useState } from 'react'
 import ModelViewer from './components/ModelViewer'
 import FeedbackButtons from './components/FeedbackButtons'
+import SemanticTest from './components/SemanticTest'
 
 export default function Home() {
   const [prompt, setPrompt] = useState('')
   const [modelUrl, setModelUrl] = useState<string | null>(null)
+  const [modelName, setModelName] = useState<string | null>(null)
+  const [matchingMethod, setMatchingMethod] = useState<string | null>(null)
   const [promptId, setPromptId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -35,6 +38,8 @@ export default function Home() {
 
       const data = await response.json()
       setModelUrl(data.modelUrl)
+      setModelName(data.modelName)
+      setMatchingMethod(data.matchingMethod)
       setPromptId(data.promptId)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
@@ -68,7 +73,13 @@ export default function Home() {
         <p className="text-lg text-gray-600">
           Describe a 3D object or scene and see it come to life in AR
         </p>
+        <p className="text-sm text-gray-500 mt-2">
+          Powered by AI semantic similarity matching
+        </p>
       </div>
+
+      {/* Semantic Test Component - Remove this after testing */}
+      <SemanticTest />
 
       <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
         <div className="mb-4">
@@ -102,7 +113,25 @@ export default function Home() {
 
       {modelUrl && (
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Model</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">Generated Model</h2>
+            <div className="flex items-center space-x-2">
+              {modelName && (
+                <span className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                  {modelName}
+                </span>
+              )}
+              {matchingMethod && (
+                <span className={`text-xs px-2 py-1 rounded ${
+                  matchingMethod === 'semantic'
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-yellow-100 text-yellow-800'
+                }`}>
+                  {matchingMethod === 'semantic' ? 'AI Semantic' : 'Keyword Fallback'}
+                </span>
+              )}
+            </div>
+          </div>
           <ModelViewer modelUrl={modelUrl} />
           <FeedbackButtons onFeedback={handleFeedback} />
         </div>
